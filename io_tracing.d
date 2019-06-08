@@ -7,6 +7,7 @@ syscall::write:entry
     self->entry = timestamp;
 }
 
+//initiate non continuous IO op
 syscall::lseek:entry
 {
     self->random_io = 1;
