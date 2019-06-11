@@ -16,7 +16,7 @@ dtrace:::BEGIN
 syscall::open:entry
 /execname == "iozone"/
 {
-    if(!(arg1 & O_CREAT)) //file already exists
+    if(arg1 & O_CREAT != O_CREAT) //file already exists
     {
         self->exists = 1;
     }
