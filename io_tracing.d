@@ -3,7 +3,6 @@
 #pragma D option quiet
 
 dtrace:::BEGIN
-/execname == "iozone"/
 {
     read_delta = 0;
     reread_delta = 0;
@@ -16,7 +15,7 @@ dtrace:::BEGIN
 syscall::open:entry
 /execname == "iozone"/
 {
-    if(arg1 & O_CREAT != O_CREAT) //file already exists
+    if(arg1 & O_CREAT) //file already exists
     {
         self->exists = 1;
     }
@@ -88,36 +87,29 @@ syscall::read:return
 }
 
 dtrace:::END
-/execname == "iozone"/
 {
-    this->seconds = read_delta / 1000000000;
-    printf("Read rate:");
-    normalize(@read_rate, this->seconds);
+    printf("Read\n");
+    printf("Read time (ns): \n\t%d\nAmount (bytes):", read_delta);
     printa(@read_rate);
 
-    this->seconds = reread_delta / 1000000000;
-    printf("Reread rate:");
-    normalize(@reread_rate, this->seconds);
+    printf("Reread\n");
+    printf("Reread time (ns): \n\t%d\nAmount (bytes):", reread_delta);
     printa(@reread_rate);
 
-    this->seconds = random_read_delta / 1000000000;
-    printf("Random Read rate:");
-    normalize(@random_read_rate, this->seconds);
+    printf("Random Read\n");
+    printf("Random Read time (ns): \n\t%d\nAmount (bytes):", random_read_delta);
     printa(@random_read_rate);
 
     // Writes
-    this->seconds = write_delta / 1000000000;
-    printf("Write rate:");
-    normalize(@write_rate, this->seconds);
+    printf("Write\n");
+    printf("Write time (ns): \n\t%d\nAmount (bytes):", write_delta);
     printa(@write_rate);
 
-    this->seconds = rewrite_delta / 1000000000;
-    printf("Rewrite rate:");
-    normalize(@rewrite_rate, this->seconds);
+    printf("Rewrite\n");
+    printf("Rewrite time (ns): \n\t%d\nAmount (bytes):", rewrite_delta);
     printa(@rewrite_rate);
 
-    this->seconds = random_write_delta / 1000000000;
-    printf("Random Write rate:");
-    normalize(@random_write_rate, this->seconds);
+    printf("Random Write\n");
+    printf("Random Write time (ns): \n\t%d\nAmount (bytes):", random_write_delta);
     printa(@random_write_rate);
 }
