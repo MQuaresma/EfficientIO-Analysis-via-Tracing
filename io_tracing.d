@@ -15,18 +15,16 @@ dtrace:::BEGIN
 syscall::open:entry
 /execname == "iozone"/
 {
-    if(!(arg1 && O_CREAT)) //file already exists
-    {
-        self->exists = 1;
-    }
+    self->exists = !(arg1 && O_CREAT); //file already exists
 }
 
 syscall::close:return
 /execname == "iozone"/
 {
     self->exists = 0;
+    self->read = 0;
+    self->written = 0;
 }
-
 
 syscall::read:entry,
 syscall::write:entry
@@ -46,19 +44,21 @@ syscall::write:return
 /execname == "iozone" && self->entry/
 {
     r_time = (timestamp-self->entry);
-    if(self->exists)
+    if(self->exists || self->written)
     {
         rewrite_delta += r_time;
         @rewrite_rate = sum(arg0);
     }
-    else if(self->random_io == 1)
+    else if(self->random_io)
     {
         self->random_io = 0;
+        self->written = 1;
         random_write_delta += r_time;
         @random_write_rate = sum(arg0);
     }
     else
     {
+        self->written = 1;
         write_delta += r_time;
         @write_rate = sum(arg0);
     }
@@ -68,19 +68,21 @@ syscall::read:return
 /execname == "iozone" && self->entry/
 {
     r_time = (timestamp-self->entry);
-    if(self->exists)
+    if(self->read)
     {
         reread_delta += r_time;
         @reread_rate = sum(arg0);
     }
-    else if(self->random_io == 1)
+    if(self->random_io)
     {
         self->random_io = 0;
+        self->read = 1;
         random_read_delta += r_time;
         @random_read_rate = sum(arg0);
     }
     else
     {
+        self->read = 1;
         read_delta += r_time;
         @read_rate = sum(arg0);
     }
