@@ -3,6 +3,7 @@
 #pragma D option quiet
 
 dtrace:::BEGIN
+/execname == "iozone"/
 {
     read_delta = 0;
     reread_delta = 0;
@@ -13,6 +14,7 @@ dtrace:::BEGIN
 }
 
 syscall::open:entry
+/execname == "iozone"/
 {
     if(!(arg1 & O_CREAT)) //file already exists
     {
@@ -21,6 +23,7 @@ syscall::open:entry
 }
 
 syscall::close:return
+/execname == "iozone"/
 {
     self->exists = 0;
 }
@@ -28,18 +31,20 @@ syscall::close:return
 
 syscall::read:entry,
 syscall::write:entry
+/execname == "iozone"/
 {
     self->entry = timestamp;
 }
 
 //initiate non continuous IO op
 syscall::lseek:return
+/execname == "iozone"/
 {
     self->random_io = 1;
 }
 
 syscall::write:return
-/self->entry/
+/execname == "iozone" && self->entry/
 {
     r_time = (timestamp-self->entry);
     if(self->exists)
@@ -61,7 +66,7 @@ syscall::write:return
 }
 
 syscall::read:return
-/self->entry/
+/execname == "iozone" && self->entry/
 {
     r_time = (timestamp-self->entry);
     if(self->exists)
@@ -83,6 +88,7 @@ syscall::read:return
 }
 
 dtrace:::END
+/execname == "iozone"/
 {
     this->seconds = read_delta / 1000000000;
     printf("Read rate:");
