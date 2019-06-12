@@ -94,24 +94,24 @@ dtrace:::END
     printf("Read time (ns): \n\t%d\nAmount (bytes):", read_delta);
     printa(@read_rate);
 
-    printf("Reread\n");
+    printf("\n\nReread\n");
     printf("Reread time (ns): \n\t%d\nAmount (bytes):", reread_delta);
     printa(@reread_rate);
 
-    printf("Random Read\n");
+    printf("\n\nRandom Read\n");
     printf("Random Read time (ns): \n\t%d\nAmount (bytes):", random_read_delta);
     printa(@random_read_rate);
 
     // Writes
-    printf("Write\n");
+    printf("\n\nWrite\n");
     printf("Write time (ns): \n\t%d\nAmount (bytes):", write_delta);
     printa(@write_rate);
 
-    printf("Rewrite\n");
+    printf("\n\nRewrite\n");
     printf("Rewrite time (ns): \n\t%d\nAmount (bytes):", rewrite_delta);
     printa(@rewrite_rate);
 
-    printf("Random Write\n");
+    printf("\n\nRandom Write\n");
     printf("Random Write time (ns): \n\t%d\nAmount (bytes):", random_write_delta);
     printa(@random_write_rate);
 }
