@@ -1,0 +1,314 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+\usepackage[a4paper, total={7in, 9in}]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{verbatim}
+\usepackage[bottom]{footmisc}
+\usepackage[style=numeric]{biblatex}
+\usepackage{minted}
+\usepackage{csquotes}
+\usepackage{fancyvrb}
+\usepackage[title]{appendix}
+\usepackage{xcolor}
+\usepackage{indentfirst}
+\addbibresource{references.bib}
+
+\newcommand{\titleRule}{
+    \rule{\linewidth}{0.5mm} \\ [0.25cm]
+}
+
+\begin{document}
+
+{
+\center
+\textsc{\Large Universidade do Minho} \\ [0.5cm]
+\textsc{\Large Mestrado Integrado em Engenharia Informática} \\ [0.5cm]
+\textsc{\large Engenharia de Sistemas de Computação} \\ [0.5cm]
+
+{\LARGE \bfseries Análise de eficiência de IO} \\[0.2cm]
+
+\begin{tabular}{c c}
+    José Carlos Lima Martins & Miguel Miranda Quaresma \\
+    A78821 & A77049  \\
+\end{tabular} \\[0.5cm]
+
+\today \\[1cm]
+}
+
+\section{Introdução}
+O presente trabalho apresenta duas metodologias de \textit{benchmarking} de operações de IO de sistemas de computação. Mais concretamente, o 
+objetivo destas \textit{benchmarks} é avaliar o desempenho de diferentes operações de IO: leitura, escrita, releitura, reescrita, leitura/escrita 
+aleatórias. As duas abordagens de seguida analisadas variam na forma como os resultados são recolhidos: \textit{benchmark} passiva, onde um 
+teste corre livremente e a análise de resultados é realizada após obter os resultados; \textit{benchmark} ativa, onde a 
+análise dos resultados é realizada durante a obtenção dos resultados. A primeira abordagem será conseguida através da \textit{benchmark}
+\texttt{IOzone}, e a segunda recorrendo à ferramenta \texttt{D-Trace} de forma a obter resultados semelhantes. 
+
+\section{Abordagens}
+
+\subsection{Benchmark Passiva}
+A \textit{benchmark} \texttt{IOzone} é uma ferramenta que permite avaliar o desempenho do sistema de ficheiros através de uma gama de 
+operações sobre ficheiros. Esta \textit{benchmark} disponibiliza testes à performance IO para ficheiros nas seguintes operações: \texttt{read}, 
+\texttt{write}, \texttt{re-read}, \texttt{re-write}, \texttt{read backwards}, \texttt{read strided}, \texttt{record rewrite}, \texttt{fread}, 
+\texttt{fwrite}, \texttt{freread}, \texttt{frewrite}, \texttt{random read}, \texttt{random write}, \texttt{pread}, \texttt{pwrite}, \texttt{mmap}, 
+\texttt{aio\_read} e \texttt{aio\_write}. Contudo, o presente trabalho apenas se preocupa com as operações de seguida descritas:
+\label{iozone_ops}
+\begin{itemize}
+    \item \texttt{read}: Mede a performance de leitura de um ficheiro existente.
+    \item \texttt{write}: Mede a performance de escrita num ficheiro novo. Quando um ficheiro é criado, para além do seu conteúdo, são gerados 
+    dados sobre o ficheiro, designados meta-dados, que permitem obter informação como o diretório onde o ficheiro se encontra, o espaço 
+    alocado para o mesmo, a data de criação e quaisquer outros dados associados ao ficheiro que não façam parte do seu conteúdo. Consequentemente, 
+    é normal que o desempenho de escrita inicial seja inferior ao de reescrever o ficheiro, visto ser necessário gerar esta informação.
+    \item \texttt{re-read}: Mede a performance de ler um ficheiro que foi recentemente lido. Neste tipo de leituras é esperado que a performance 
+    seja melhor visto que o sistema operativo mantém em \textit{cache} os dados de ficheiros recentemente acedidos, que pode ser usada para 
+    satisfazer leituras, resultando numa diminuição da latência associada a esta operação.
+    \item \texttt{re-write}: Mede a performance de escrever um ficheiro que já existe. Quando é escrito um ficheiro que já existe o trabalho necessário 
+    é menor visto que este já possui meta-dados logo, é normal a performance de reescrita seja maior que a de escrever um ficheiro novo (escrita).
+    \item \texttt{random read}: Mede a performance de ler dados de um ficheiro em posições aleatórias. A performance de um sistema neste tipo de atividades 
+    pode ser afetada por vários fatores como o tamanho da \textit{cache} do sistema operativo, número de discos, latência de pesquisa (\texttt{seek}), 
+    entre outros.
+    \item \texttt{random write}: Mede a performance de escrever dados num ficheiro em posições aleatórias.
+\end{itemize}
+
+A observação da performance do sistema operativo é importante visto que certos fabricantes de sistemas operativos otimizam o seu sistema por forma a 
+executarem bem as aplicações mais frequentes. Contudo, estas otimizações podem levar a que o desempenho do sistema seja inferior em aplicações para
+as quais o mesmo não tenha sido otimizado. Como tal, é útil recorrer a \textit{benchmarks} como a \texttt{IOzone} que permite determinar para que 
+aplicações o sistema operativo foi otimizado.
+
+\subsection{Benchmark Ativa}
+O uso de ferramentas como \texttt{D-Trace} permitem analisar o comportamento do sistema instrumentando-o. No caso do \texttt{D-Trace} a instrumentação
+é feita em pontos designados \textit{probes} que, quando desencadeados, permitem executar ações determinadas num \textit{script} escrito na linguagem
+D, própria desta ferramenta.
+Como consequência é possível desenvolver um \textit{script} em D que monitorize a realização de chamadas ao sistema do tipo \texttt{read}, \texttt{write},
+\texttt{open} e que, com acesso aos parâmetros passados às mesmas e aos valores por estas devolvidos, calcule os valores devolvidos pela \textit{benchmark}
+\texttt{IOzone}.
+Este tipo de observação, frequentemente designada por \textit{dynamic tracing}, permite um elevado grau de flexibilidade na forma como os dados são tratados
+bem como no tipo de valores/métricas recolhidas, envolvendo pouco \textit{overhead} adicional.
+
+\section{Resultados}
+Os valores de seguida apresentados foram recolhidos no sistema com as configurações apresentadas em \ref{sys_hw_sw}.
+Para cada uma das \textit{benchmarks} foram recolhidas 15 amostras sendo, de seguida, apresentadas as medianas de cada uma das métricas recolhidas.
+
+\subsection{IOzone}
+No caso do \texttt{IOzone}, o teste executado foi \verb|iozone -i0 -i1 -i2|, que permite obter os valores em relação às operações descritas em \ref{iozone_ops}. Os resultados obtidos em \texttt{kBytes/sec} foram:
+
+\begin{itemize}
+    \item write: 311599
+    \item rewrite: 1066910
+    \item read: 3104171
+    \item reread: 3510074
+    \item random read: 2357784
+    \item random write: 957072 
+\end{itemize}
+
+\subsection{DTrace}
+O \textit{script} \texttt{D-Trace} desenvolvido foi usado para observar o comportamento da \textit{benchmark} \texttt{IOzone} ao nível das chamadas
+ao sistema referidas anteriormente. Adicionalmente, para identificar acessos aleatórios (de escrita ou leitura), foram ativadas \textit{probes} à
+saída da função \texttt{lseek} cuja chamada permite identificar ocorrências de acessos não sequenciais em ficheiros. 
+Os acessos de \textit{re-read} são identificados como todos os subsequentes à primeira leitura de um ficheiro. Por outro lado, os \textit{re-write}'s 
+são identificados como as escritas feitas em ficheiros que não tenham sido abertos com a \textit{flag} \texttt{O\_CREAT} ou, nos casos em que isto não 
+se verifica, como as (escritas) subsequentes à primeira escrita num ficheiro novo.
+Os resultados obtidos apresentam-se de seguida, em \texttt{kBytes/sec}:
+\begin{itemize}
+    \item write: 164555
+    \item rewrite: 474300
+    \item read: 1377020
+    \item reread: 1396362
+    \item random read: 1403933
+    \item random write: 329973
+\end{itemize}
+
+
+\subsection{Comparação de Abordagens}
+
+A natureza das \textit{benchmarks} realizadas leva a que os resultados recolhidos apresentem valores distintos. 
+Analisando estes resultados, um dos fatores de relevo prende-se com o facto dos valores recolhidos pela ferramenta \texttt{D-Trace} caracterizarem
+o sistema como apresentando uma \textit{performance} inferior aos apresentados pela \textit{benchmark} \texttt{IOzone}. Uma possível justificação
+para este comportamento passa pelo facto de ferramentas que funcionem à base de instrumentação, como o \texttt{D-Trace}, possuírem um \textit{overhead} 
+que, apesar de reduzido, pode introduzir erros nas medições. Como tal, e visto que os resultados obtidos são percentagens do tempo de execução, quanto
+maior este tempo for menor serão os valor obtidos. 
+
+Adicionalmente, os resultados obtidos confirmam o comportamento esperado para os diferentes valores medidos. Nomeadamente, é possível observar
+que as re-escritas são feitas mais rapidamente que as escritas. Por outro lado, a diferença entre leituras e re-leituras, ainda que existente, não é
+tão evidente, isto pode ser motivado pelo facto de o sistema operativo não estar a usar a \textit{cache} do sistema de ficheiros da maneira mais eficiente
+bem como pelas leituras aleatórias feitas no decorrer da \textit{benchmark}, que limitam a capacidade do sistema operativo de identificar padrões que permitam
+realizar \textit{prefetch} de dados.
+
+Uma clara diferença nas duas abordagens analisadas prende-se com a flexibilidade que cada uma apresenta face às métricas que podem ser recolhidas. No caso da \textit{benchmark}
+ativa as métricas recolhidas são completamente determinadas pelo "programador", que escolhe as ferramentas com base nas métricas que pretende obter. Isto permite que sejam
+identificados possíveis limitadores de \textit{performance} quando os valores recolhidos pela \textit{benchmark} são abaixo do esperado. 
+
+Por outro lado, com \textit{benchmark}'s passivas não é possível garantir que os valores foram recolhidos corretamente, podendo ter sido usados métodos estatísticos inadequados 
+ou processos de tratamento de dados que induzam em erro. Como tal, o uso de \textit{benchmark}'s ativas permite obter valores fidedignos e promove um papel pro-ativo por parte 
+do administrador de sistemas na resolução de possíveis problemas de \textit{performance} envolvendo, no entanto, uma maior complexidade, dado ser necessário analisar o comportamento 
+do sistema enquanto a \textit{benchmark} se encontra em execução.
+
+\section{Conclusão}
+O recurso a \textit{benchmarking} como uma forma de obter dados relativamente ao desempenho de um sistema ou aplicação face a determinados \textit{workloads} é uma ferramenta que 
+deve ser tida em conta quando o objetivo passa por identificar possíveis \textit{bottlenecks} para a \textit{performance} de um sistema. No entanto, o trabalho realizado permite
+retirar uma conclusão óbvia face às abordagens de \textit{bencharmking} analisadas: o uso de \textit{benchmarks} ativas, ao invés de passivas, deve ser favorecido em situações em que
+seja necessário obter mais do que os resultados finais apresentados pelas passivas. Esta limitação das \textit{benchmarks} passivas impede que sejam determinadas as causas de problemas
+que não possam ser identificados apenas com os valores apresentados pelas mesmas, algo que não se verifica nas \textit{benchmarks} ativas que permitem recolher estatísticas sobre um 
+vasto leque de recursos que podem causar problemas na \textit{performance} de um sistema durante a realização destas \textit{benchmarks}.
+As ferramentas usadas nas \textit{benchmarks} ativas devem, no entanto, ser cuidadosamente escolhidas já que estas apresentam um \textit{overhead} inerente que, ainda que pequeno, pode
+alterar os resultados da \textit{benchmark} em si.
+
+\printbibliography
+
+\newpage 
+\begin{appendices}
+
+\section{Especificações do Sistema}
+\label{sys_hw_sw}
+\begin{itemize}
+    \item Fabricante: Apple
+    \item Modelo: MacBook Pro Retina, 13-inch, Early 2015
+    \item CPU:
+        \begin{itemize}
+            \item Fabricante: Intel
+            \item Modelo: i5-5257U 3.10 GHz
+            \item Número de cores: 2 cores, 4 threads (Hyper-Threading)
+            \item CPU Caches:
+                \begin{itemize}
+                    \item L1d (por core): 32 KiB, 8-way
+                    \item L1i (por core): 32 KiB, 8-way
+                    \item L2 (por core): 256 KiB, 8-way
+                    \item L3 (por package): 3072 KiB, 12-way
+                \end{itemize}
+        \end{itemize}
+    \item Memória Principal: 8 GB
+    \item Memória Secundária:
+        \begin{itemize}
+            \item Tamanho: 256GB
+            \item Velocidade de leitura: 950MB/s
+            \item Velocidade de escrita: 950MB/s
+        \end{itemize}
+    \item Sistema Operativo: macOS 10.14
+\end{itemize}
+
+\section{\textit{Script} \texttt{D-Trace}}
+\label{script_dtrace}
+\begin{minted}{bash}
+#!/usr/sbin/dtrace -s
+
+#pragma D option quiet
+
+dtrace:::BEGIN
+{
+    read_delta = 0;
+    reread_delta = 0;
+    random_read_delta = 0;
+    write_delta = 0;
+    rewrite_delta = 0;
+    random_write_delta = 0;
+}
+
+syscall::open:entry
+/execname == "iozone"/
+{
+    self->exists = !(arg1 && O_CREAT); //file already exists
+}
+
+syscall::close:return
+/execname == "iozone"/
+{
+    self->exists = 0;
+    self->read = 0;
+    self->written = 0;
+}
+
+syscall::read:entry,
+syscall::write:entry
+/execname == "iozone"/
+{
+    self->entry = timestamp;
+}
+
+//initiate non continuous IO op
+syscall::lseek:return
+/execname == "iozone"/
+{
+    self->random_io = 1;
+}
+
+syscall::write:return
+/execname == "iozone" && self->entry/
+{
+    r_time = (timestamp-self->entry);
+    if(self->exists || self->written)
+    {
+        rewrite_delta += r_time;
+        @rewrite_rate = sum(arg0);
+    }
+    else if(self->random_io)
+    {
+        self->random_io = 0;
+        self->written = 1;
+        random_write_delta += r_time;
+        @random_write_rate = sum(arg0);
+    }
+    else
+    {
+        self->written = 1;
+        write_delta += r_time;
+        @write_rate = sum(arg0);
+    }
+}
+
+syscall::read:return
+/execname == "iozone" && self->entry/
+{
+    r_time = (timestamp-self->entry);
+    if(self->read)
+    {
+        reread_delta += r_time;
+        @reread_rate = sum(arg0);
+    }
+    if(self->random_io)
+    {
+        self->random_io = 0;
+        self->read = 1;
+        random_read_delta += r_time;
+        @random_read_rate = sum(arg0);
+    }
+    else
+    {
+        self->read = 1;
+        read_delta += r_time;
+        @read_rate = sum(arg0);
+    }
+}
+
+dtrace:::END
+{
+    printf("Read\n");
+    printf("Read time (ns): \n\t%d\nAmount (bytes):", read_delta);
+    printa(@read_rate);
+
+    printf("\n\nReread\n");
+    printf("Reread time (ns): \n\t%d\nAmount (bytes):", reread_delta);
+    printa(@reread_rate);
+
+    printf("\n\nRandom Read\n");
+    printf("Random Read time (ns): \n\t%d\nAmount (bytes):", random_read_delta);
+    printa(@random_read_rate);
+
+    // Writes
+    printf("\n\nWrite\n");
+    printf("Write time (ns): \n\t%d\nAmount (bytes):", write_delta);
+    printa(@write_rate);
+
+    printf("\n\nRewrite\n");
+    printf("Rewrite time (ns): \n\t%d\nAmount (bytes):", rewrite_delta);
+    printa(@rewrite_rate);
+
+    printf("\n\nRandom Write\n");
+    printf("Random Write time (ns): \n\t%d\nAmount (bytes):", random_write_delta);
+    printa(@random_write_rate);
+}
+\end{minted}
+
+\end{appendices}
+
+\end{document} 
